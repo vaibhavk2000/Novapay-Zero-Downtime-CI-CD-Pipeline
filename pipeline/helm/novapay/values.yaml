@@ -1,0 +1,6 @@
+replicaCount: 3
+image:
+  repository: novapay
+  tag: latest
+service:
+  port: 8080

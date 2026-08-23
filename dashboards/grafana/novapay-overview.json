@@ -1,0 +1,17 @@
+{
+  "title": "NovaPay Engineering Overview",
+  "panels": [
+    {
+      "title": "Error Rate"
+    },
+    {
+      "title": "p99 Latency"
+    },
+    {
+      "title": "Deployment Frequency"
+    },
+    {
+      "title": "Rollback Rate"
+    }
+  ]
+}

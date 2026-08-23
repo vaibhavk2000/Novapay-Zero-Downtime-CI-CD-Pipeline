@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: novapay
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: { app: novapay }
+  template:
+    metadata:
+      labels: { app: novapay }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: novapay
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet: { path: /actuator/health, port: 8080 }
+          livenessProbe:
+            httpGet: { path: /actuator/health, port: 8080 }
