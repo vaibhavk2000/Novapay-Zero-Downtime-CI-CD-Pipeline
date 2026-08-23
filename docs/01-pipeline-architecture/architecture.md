@@ -563,8 +563,4 @@ Exceptions must be time-limited and reviewed before expiry.
 | Policy Validation          | < 5 minutes  |
 | Deployment Verification    | < 10 minutes |
 
-## Target Pipeline Duration
 
-The target duration for standard pull request validation is **less than 30 minutes through parallel execution**, excluding extended environment-specific DAST and progressive production observation periods.
-
-````
