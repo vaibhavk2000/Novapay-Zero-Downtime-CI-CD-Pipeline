@@ -110,11 +110,11 @@ jobs:
 
 
   # ============================================================
-  # STAGE 3 - UNIT AND INTEGRATION TESTS
+  # STAGE 3 - UNIT TESTS AND COVERAGE GATE
   # ============================================================
 
   test:
-    name: Stage 3 - Test NovaPay
+    name: Stage 3 - Test and Coverage Gate
     needs: build
     runs-on: ubuntu-latest
 
@@ -134,10 +134,17 @@ jobs:
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
 
-      - name: Run unit tests
+      - name: Run tests and enforced coverage gate
         working-directory: app
         run: |
-          gradle test --no-daemon
+          gradle clean check --no-daemon
+
+      - name: Display coverage report location
+        if: always()
+        working-directory: app
+        run: |
+          echo "JaCoCo coverage reports:"
+          find build/reports/jacoco -maxdepth 3 -type f -print || true
 
       - name: Upload test results
         if: always()
@@ -145,6 +152,16 @@ jobs:
         with:
           name: novapay-test-results
           path: app/build/test-results/
+          if-no-files-found: warn
+
+      - name: Upload JaCoCo coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: novapay-coverage-report
+          path: |
+            app/build/reports/jacoco/test/
+            app/build/jacoco/
           if-no-files-found: warn
 
 
@@ -432,7 +449,7 @@ jobs:
           Completed Pipeline Stages:
           1. Source Validation and Secret Scanning
           2. Java 21 Build
-          3. Unit and Integration Testing
+          3. Unit and Integration Testing with Enforced Coverage Gate
           4. SAST and Code Quality
           5. Dependency Security Scanning
           6. Container Build, SBOM and Image Scan
@@ -442,6 +459,10 @@ jobs:
           10. Progressive Production Deployment
           11. Post-Deployment Verification
           12. Evidence Archival
+
+          Coverage Requirements:
+          Line Coverage: >= 80%
+          Branch Coverage: >= 70%
           EOF
 
           cat pipeline-evidence/pipeline-summary.txt
@@ -455,3 +476,5 @@ jobs:
             evidence/
             runbooks/
             docs/
+          if-no-files-found: warn
+
