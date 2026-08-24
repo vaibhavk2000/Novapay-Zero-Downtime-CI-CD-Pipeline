@@ -27,22 +27,26 @@ jobs:
           java-version: "21"
           cache: gradle
 
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.8"
+
       - name: Check Java version
         run: java -version
 
       - name: Check Gradle version
-        working-directory: app
-        run: ./gradlew --version
+        run: gradle --version
 
       - name: Show dependency versions
         working-directory: app
         run: |
-          ./gradlew dependencies --configuration runtimeClasspath
+          gradle dependencies --configuration runtimeClasspath
 
       - name: Build JAR
         working-directory: app
         run: |
-          ./gradlew clean bootJar --no-daemon
+          gradle clean bootJar --no-daemon
 
       - name: Verify JAR
         run: |
@@ -55,19 +59,6 @@ jobs:
             --no-cache \
             -t novapay:${{ github.sha }} \
             .
-
-      - name: Inspect Docker image
-        run: |
-          echo "=== Docker image ==="
-          docker image inspect novapay:${{ github.sha }}
-
-          echo "=== OS ==="
-          docker run --rm novapay:${{ github.sha }} \
-            sh -c 'cat /etc/os-release'
-
-          echo "=== Pebble ==="
-          docker run --rm novapay:${{ github.sha }} \
-            sh -c 'ls -lah /usr/bin/pebble 2>/dev/null || echo "Pebble NOT FOUND"'
 
       - name: Run Trivy
         uses: aquasecurity/trivy-action@master
