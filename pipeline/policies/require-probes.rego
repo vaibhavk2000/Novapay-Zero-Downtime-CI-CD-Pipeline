@@ -1,11 +1,11 @@
 package main
 
-deny contains msg if {
+deny[msg] {
     input.kind == "Deployment"
 
     containers := input.spec.template.spec.containers
 
-    some container in containers
+    container := containers[_]
 
     not container.livenessProbe
 
@@ -15,12 +15,12 @@ deny contains msg if {
     )
 }
 
-deny contains msg if {
+deny[msg] {
     input.kind == "Deployment"
 
     containers := input.spec.template.spec.containers
 
-    some container in containers
+    container := containers[_]
 
     not container.readinessProbe
 

@@ -1,11 +1,9 @@
 package main
 
-deny contains msg if {
+deny[msg] {
     input.kind == "Deployment"
 
-    pod_security := input.spec.template.spec.securityContext
-
-    not pod_security.runAsNonRoot
+    not input.spec.template.spec.securityContext.runAsNonRoot
 
     msg := "Deployment must run with runAsNonRoot set to true"
 }
