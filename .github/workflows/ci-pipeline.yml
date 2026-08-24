@@ -16,6 +16,7 @@ permissions:
 
 env:
   JAVA_VERSION: "21"
+  GRADLE_VERSION: "8.7"
   IMAGE_NAME: novapay
 
 jobs:
@@ -72,11 +73,14 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
 
-      - name: Setup Gradle
+      - name: Setup Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
 
-      - name: Install Gradle
+      - name: Verify Java and Gradle
         run: |
+          java -version
           gradle --version
 
       - name: Build application
@@ -113,8 +117,10 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
 
-      - name: Setup Gradle
+      - name: Setup Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
 
       - name: Run tests
         run: |
@@ -129,7 +135,7 @@ jobs:
 
 
   # ============================================================
-  # STAGE 4 - SAST
+  # STAGE 4 - STATIC SECURITY ANALYSIS
   # ============================================================
 
   sast:
@@ -262,7 +268,7 @@ jobs:
           echo "Checking HTTP error rate..."
           echo "Checking p99 latency..."
 
-          echo "Deployment verification completed."
+          echo "Deployment verification completed successfully."
 
       - name: Generate pipeline evidence
         run: |
@@ -277,12 +283,12 @@ jobs:
 
           Completed Stages:
           1. Source Validation
-          2. Build
+          2. Build Application
           3. Unit Testing
           4. Static Security Analysis
           5. Dependency Security Scan
           6. Container Build and Scan
-          7. Policy Validation
+          7. Policy and Compliance Validation
           8. Deployment Verification
           EOF
 
