@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:21-jre-jammy
 
 RUN useradd --system --uid 10001 --no-create-home appuser
 
