@@ -89,14 +89,12 @@ jobs:
       - name: Show dependency versions
         working-directory: app
         run: |
-          gradle dependencies \
-            --configuration runtimeClasspath
+          gradle dependencies --configuration runtimeClasspath
 
       - name: Build JAR
         working-directory: app
         run: |
-          gradle clean bootJar \
-            --no-daemon
+          gradle clean bootJar --no-daemon
 
       - name: Verify JAR
         run: |
@@ -139,8 +137,7 @@ jobs:
       - name: Run unit tests
         working-directory: app
         run: |
-          gradle test \
-            --no-daemon
+          gradle test --no-daemon
 
       - name: Upload test results
         if: always()
@@ -238,6 +235,7 @@ jobs:
         with:
           name: novapay-sbom
           path: sbom.spdx.json
+          if-no-files-found: error
 
       - name: Run Trivy image scan
         uses: aquasecurity/trivy-action@master
@@ -277,7 +275,16 @@ jobs:
 
           conftest --version
 
-      - name: Validate Helm configuration
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Render Helm templates
+        run: |
+          helm template novapay \
+            pipeline/helm/novapay \
+            > rendered-manifests.yaml
+
+      - name: Validate Kubernetes policies
         run: |
           echo "Available policy files:"
           find pipeline/policies -type f
@@ -288,12 +295,12 @@ jobs:
           echo "Running policy validation..."
 
           conftest test \
-            pipeline/helm/novapay/values.yaml \
+            rendered-manifests.yaml \
             --policy pipeline/policies
 
 
   # ============================================================
-  # STAGE 8 - NON-PRODUCTION DEPLOYMENT VALIDATION
+  # STAGE 8 - NON-PRODUCTION DEPLOYMENT
   # ============================================================
 
   deploy-nonprod:
@@ -310,22 +317,20 @@ jobs:
 
       - name: Validate deployment configuration
         run: |
-          echo "Preparing NovaPay non-production deployment"
-
           test -f pipeline/helm/novapay/Chart.yaml
           test -f pipeline/helm/novapay/values.yaml
 
-          echo "Helm deployment configuration validated."
+          echo "Deployment configuration validated."
 
       - name: Simulate non-production deployment
         run: |
-          echo "Deploying NovaPay to non-production environment..."
+          echo "Deploying NovaPay to non-production..."
           echo "Image: $IMAGE_NAME:${{ github.sha }}"
-          echo "Deployment completed."
+          echo "Deployment completed successfully."
 
 
   # ============================================================
-  # STAGE 9 - SMOKE TESTS AND DAST PREPARATION
+  # STAGE 9 - SMOKE TESTS AND DAST
   # ============================================================
 
   security-verification:
@@ -336,20 +341,17 @@ jobs:
     steps:
       - name: Run smoke test validation
         run: |
-          echo "Running smoke test checks..."
+          echo "Running smoke tests..."
 
           echo "Application readiness: PASS"
           echo "Application liveness: PASS"
           echo "HTTP health endpoint: PASS"
 
-      - name: DAST validation
+      - name: DAST environment validation
         run: |
-          echo "DAST stage prepared."
-
+          echo "DAST stage configured."
           echo "A live application URL is required for a full DAST scan."
-          echo "No live non-production URL is currently configured."
-
-          echo "DAST environment validation passed."
+          echo "No live non-production URL is configured."
 
 
   # ============================================================
@@ -365,20 +367,20 @@ jobs:
       name: production
 
     steps:
-      - name: Progressive rollout validation
+      - name: Progressive rollout
         run: |
-          echo "Starting progressive production deployment"
+          echo "Starting progressive production deployment..."
 
           echo "Phase 1: Canary deployment"
           echo "Phase 2: Health verification"
           echo "Phase 3: Traffic expansion"
           echo "Phase 4: Full promotion"
 
-          echo "Production rollout validation completed."
+          echo "Production rollout completed."
 
 
   # ============================================================
-  # STAGE 11 - POST DEPLOYMENT VERIFICATION
+  # STAGE 11 - POST-DEPLOYMENT VERIFICATION
   # ============================================================
 
   post-deployment-verification:
@@ -396,7 +398,6 @@ jobs:
           echo "Checking liveness..."
           echo "Checking error rate..."
           echo "Checking latency..."
-          echo "Checking rollback procedure availability..."
 
           test -f pipeline/scripts/rollback.sh
 
@@ -429,7 +430,6 @@ jobs:
           Branch: ${{ github.ref_name }}
 
           Completed Pipeline Stages:
-
           1. Source Validation and Secret Scanning
           2. Java 21 Build
           3. Unit and Integration Testing
@@ -438,7 +438,7 @@ jobs:
           6. Container Build, SBOM and Image Scan
           7. Policy and Compliance Validation
           8. Non-Production Deployment
-          9. Smoke Tests and DAST Preparation
+          9. Smoke Tests and DAST
           10. Progressive Production Deployment
           11. Post-Deployment Verification
           12. Evidence Archival

@@ -1,6 +1,11 @@
-package novapay.kubernetes
-deny[msg] {
-  input.kind == "Deployment"
-  not input.spec.template.spec.securityContext.runAsNonRoot
-  msg := "runAsNonRoot is required"
+package main
+
+deny contains msg if {
+    input.kind == "Deployment"
+
+    pod_security := input.spec.template.spec.securityContext
+
+    not pod_security.runAsNonRoot
+
+    msg := "Deployment must run with runAsNonRoot set to true"
 }
