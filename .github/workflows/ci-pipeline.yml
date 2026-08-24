@@ -26,39 +26,46 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
 
-      # 3. Setup Gradle
-      - name: Set up Gradle
+      # 3. Setup compatible Gradle version
+      - name: Set up Gradle 8.8
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.8"
 
-      # 4. Build Spring Boot JAR
+      # 4. Verify Gradle version
+      - name: Check Gradle version
+        run: gradle --version
+
+      # 5. Build Spring Boot JAR
       - name: Build JAR
         working-directory: app
         run: |
           gradle clean bootJar --no-daemon
 
-      # 5. Verify JAR exists
+      # 6. Verify JAR was created
       - name: Verify JAR
         run: |
           echo "Generated JAR files:"
           ls -lh app/build/libs/
 
-      # 6. Build Docker image
+      # 7. Build Docker image
       - name: Build Docker image
         run: |
           echo "Building NovaPay Docker image..."
+
           docker build \
             -t novapay:${{ github.sha }} \
             .
 
-      # 7. Run Trivy
+      # 8. Run Trivy vulnerability scan
       - name: Run Trivy
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: novapay:${{ github.sha }}
           format: table
-          exit-code: '1'
+          exit-code: "1"
           ignore-unfixed: true
           severity: CRITICAL,HIGH
           scanners: vuln
