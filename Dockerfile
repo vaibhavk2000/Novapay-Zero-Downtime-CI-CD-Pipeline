@@ -1,12 +1,14 @@
 FROM eclipse-temurin:21-jre
 
-RUN useradd -r -u 10001 appuser
+RUN useradd --system --uid 10001 --no-create-home appuser
 
 WORKDIR /app
 
 COPY app/build/libs/*.jar app.jar
 
-USER 10001
+RUN chown appuser:appuser app.jar
+
+USER appuser
 
 EXPOSE 8080
 
