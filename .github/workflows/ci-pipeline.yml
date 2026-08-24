@@ -87,6 +87,11 @@ jobs:
         run: |
           gradle clean build -x test --no-daemon
 
+      - name: Verify application artifact
+        run: |
+          echo "Generated application artifacts:"
+          ls -lh build/libs/
+
       - name: Upload application artifact
         uses: actions/upload-artifact@v4
         with:
@@ -195,11 +200,26 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
+      - name: Download application artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: novapay-application
+          path: app/build/libs
+
+      - name: Verify application artifact
+        run: |
+          echo "Checking downloaded application artifact..."
+          ls -lh app/build/libs/
+
       - name: Build Docker image
         run: |
           docker build \
             --tag $IMAGE_NAME:${{ github.sha }} \
             .
+
+      - name: Verify Docker image
+        run: |
+          docker images $IMAGE_NAME:${{ github.sha }}
 
       - name: Scan Docker image
         uses: aquasecurity/trivy-action@master
