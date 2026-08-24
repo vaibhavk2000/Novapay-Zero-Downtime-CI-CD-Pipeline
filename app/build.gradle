@@ -65,50 +65,6 @@ tasks.named('jacocoTestCoverageVerification') {
     }
 }
 
-tasks.register('printCoverage') {
-    dependsOn tasks.named('jacocoTestReport')
-
-    doLast {
-        def reportFile = file("$buildDir/reports/jacoco/test/jacocoTestReport.xml")
-
-        if (!reportFile.exists()) {
-            throw new GradleException(
-                "JaCoCo XML report not found: ${reportFile}"
-            )
-        }
-
-        def report = new XmlSlurper().parse(reportFile)
-
-        println ""
-        println "=========================================="
-        println "       NovaPay JaCoCo Coverage"
-        println "=========================================="
-
-        report.counter.each { counter ->
-            def missed = counter.@missed.toBigInteger()
-            def covered = counter.@covered.toBigInteger()
-            def total = missed + covered
-
-            def percentage = total > 0
-                ? (covered * 100.0 / total)
-                : 0.0
-
-            println String.format(
-                "%-8s : %.2f%%",
-                counter.@type.toString(),
-                percentage
-            )
-        }
-
-        println "=========================================="
-        println "Required:"
-        println "LINE   >= 80%"
-        println "BRANCH >= 70%"
-        println "=========================================="
-        println ""
-    }
-}
-
 tasks.named('check') {
     dependsOn tasks.named('jacocoTestCoverageVerification')
 }

@@ -81,10 +81,12 @@ jobs:
           gradle-version: ${{ env.GRADLE_VERSION }}
 
       - name: Check Java version
-        run: java -version
+        run: |
+          java -version
 
       - name: Check Gradle version
-        run: gradle --version
+        run: |
+          gradle --version
 
       - name: Show dependency versions
         working-directory: app
@@ -110,7 +112,7 @@ jobs:
 
 
   # ============================================================
-  # STAGE 3 - UNIT TESTS AND ENFORCED COVERAGE GATE
+  # STAGE 3 - TEST AND COVERAGE GATE
   # ============================================================
 
   test:
@@ -134,10 +136,10 @@ jobs:
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
 
-      - name: Verify test sources exist
+      - name: Verify test sources
         working-directory: app
         run: |
-          echo "Checking for test sources..."
+          echo "Checking test sources..."
 
           test -d src/test/java
 
@@ -146,25 +148,19 @@ jobs:
             -name '*.java' \
             -print -quit)"
 
-          echo "Test sources found:"
+          echo "Test files:"
           find src/test/java -type f -name '*.java'
 
-      - name: Run tests
+      - name: Run unit tests
         working-directory: app
         run: |
           gradle clean test --no-daemon
 
-      - name: Generate JaCoCo report
+      - name: Generate JaCoCo coverage report
         if: always()
         working-directory: app
         run: |
           gradle jacocoTestReport --no-daemon
-
-      - name: Display coverage
-        if: always()
-        working-directory: app
-        run: |
-          gradle printCoverage --no-daemon
 
       - name: Enforce coverage gate
         working-directory: app
@@ -235,7 +231,7 @@ jobs:
 
 
   # ============================================================
-  # STAGE 6 - CONTAINER BUILD, SBOM AND IMAGE SCAN
+  # STAGE 6 - CONTAINER BUILD, SBOM AND IMAGE SECURITY
   # ============================================================
 
   container-security:
@@ -474,10 +470,10 @@ jobs:
           Completed Pipeline Stages:
           1. Source Validation and Secret Scanning
           2. Java 21 Build
-          3. Unit Testing and Enforced Coverage Gate
+          3. Unit Testing and Coverage Gate
           4. SAST and Code Quality
           5. Dependency Security Scanning
-          6. Container Build, SBOM and Image Scan
+          6. Container Build, SBOM and Image Security
           7. Policy and Compliance Validation
           8. Non-Production Deployment
           9. Smoke Tests and DAST
@@ -486,8 +482,8 @@ jobs:
           12. Evidence Archival
 
           Coverage Requirements:
-          Line Coverage: >= 80%
-          Branch Coverage: >= 70%
+          Line Coverage >= 80%
+          Branch Coverage >= 70%
           EOF
 
           cat pipeline-evidence/pipeline-summary.txt
