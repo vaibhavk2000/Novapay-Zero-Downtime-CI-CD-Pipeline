@@ -110,7 +110,7 @@ jobs:
 
 
   # ============================================================
-  # STAGE 3 - UNIT TESTS AND COVERAGE GATE
+  # STAGE 3 - UNIT TESTS AND ENFORCED COVERAGE GATE
   # ============================================================
 
   test:
@@ -134,17 +134,42 @@ jobs:
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
 
-      - name: Run tests and enforced coverage gate
+      - name: Verify test sources exist
         working-directory: app
         run: |
-          gradle clean check --no-daemon
+          echo "Checking for test sources..."
 
-      - name: Display coverage report location
+          test -d src/test/java
+
+          test -n "$(find src/test/java \
+            -type f \
+            -name '*.java' \
+            -print -quit)"
+
+          echo "Test sources found:"
+          find src/test/java -type f -name '*.java'
+
+      - name: Run tests
+        working-directory: app
+        run: |
+          gradle clean test --no-daemon
+
+      - name: Generate JaCoCo report
         if: always()
         working-directory: app
         run: |
-          echo "JaCoCo coverage reports:"
-          find build/reports/jacoco -maxdepth 3 -type f -print || true
+          gradle jacocoTestReport --no-daemon
+
+      - name: Display coverage
+        if: always()
+        working-directory: app
+        run: |
+          gradle printCoverage --no-daemon
+
+      - name: Enforce coverage gate
+        working-directory: app
+        run: |
+          gradle jacocoTestCoverageVerification --no-daemon
 
       - name: Upload test results
         if: always()
@@ -160,7 +185,7 @@ jobs:
         with:
           name: novapay-coverage-report
           path: |
-            app/build/reports/jacoco/test/
+            app/build/reports/jacoco/
             app/build/jacoco/
           if-no-files-found: warn
 
@@ -449,7 +474,7 @@ jobs:
           Completed Pipeline Stages:
           1. Source Validation and Secret Scanning
           2. Java 21 Build
-          3. Unit and Integration Testing with Enforced Coverage Gate
+          3. Unit Testing and Enforced Coverage Gate
           4. SAST and Code Quality
           5. Dependency Security Scanning
           6. Container Build, SBOM and Image Scan
@@ -477,4 +502,3 @@ jobs:
             runbooks/
             docs/
           if-no-files-found: warn
-
