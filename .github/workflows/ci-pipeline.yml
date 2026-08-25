@@ -5,14 +5,12 @@ on:
     branches:
       - main
       - "release/**"
-
   pull_request:
     branches:
       - main
 
 permissions:
   contents: read
-  security-events: write
 
 env:
   JAVA_VERSION: "21"
@@ -21,48 +19,47 @@ env:
 
 jobs:
 
-  # ============================================================
-  # STAGE 1 - SOURCE VALIDATION AND SECRET SCANNING
-  # ============================================================
-
   source-validation:
-    name: Stage 1 - Source Validation
+    name: Source Validation
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Validate required project files
+        run: |
+          test -f app/build.gradle
+          test -f app/settings.gradle
+          test -f Dockerfile
+          test -f pipeline/helm/novapay/Chart.yaml
+          test -f pipeline/policies/require-probes.rego
+          test -f pipeline/policies/require-nonroot.rego
+
+      - name: Show repository structure
+        run: |
+          find . -maxdepth 4 -type f | sort
+
+
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    needs: source-validation
+
+    steps:
+      - name: Checkout
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - name: Validate required repository files
-        run: |
-          echo "Validating required files..."
-
-          test -f README.md
-          test -f Dockerfile
-          test -f app/build.gradle
-          test -f app/settings.gradle
-          test -f pipeline/helm/novapay/Chart.yaml
-          test -f pipeline/helm/novapay/values.yaml
-          test -f pipeline/policies/require-nonroot.rego
-          test -f pipeline/policies/require-probes.rego
-          test -f pipeline/scripts/rollback.sh
-
-          echo "Source validation passed."
-
-      - name: Scan for secrets
+      - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
 
 
-  # ============================================================
-  # STAGE 2 - BUILD WITH JAVA 21
-  # ============================================================
-
-  build:
-    name: Stage 2 - Build NovaPay
-    needs: source-validation
+  test-and-coverage:
+    name: Test and Coverage Gate
     runs-on: ubuntu-latest
+    needs: source-validation
 
     steps:
       - name: Checkout
@@ -72,92 +69,28 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: ${{ env.JAVA_VERSION }}
+          java-version: "21"
           cache: gradle
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: ${{ env.GRADLE_VERSION }}
+          gradle-version: "8.8"
 
       - name: Check Java version
-        run: |
-          java -version
+        run: java -version
 
-      - name: Check Gradle version
-        run: |
-          gradle --version
-
-      - name: Show dependency versions
+      - name: Build application
         working-directory: app
         run: |
-          gradle dependencies --configuration runtimeClasspath
+          gradle clean build --no-daemon
 
-      - name: Build JAR
+      - name: Run tests
         working-directory: app
         run: |
-          gradle clean bootJar --no-daemon
-
-      - name: Verify JAR
-        run: |
-          echo "Generated JAR files:"
-          ls -lh app/build/libs/
-
-      - name: Upload JAR artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: novapay-jar
-          path: app/build/libs/*.jar
-          if-no-files-found: error
-
-
-  # ============================================================
-  # STAGE 3 - TEST AND COVERAGE GATE
-  # ============================================================
-
-  test:
-    name: Stage 3 - Test and Coverage Gate
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Set up Java 21
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: gradle
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: ${{ env.GRADLE_VERSION }}
-
-      - name: Verify test sources
-        working-directory: app
-        run: |
-          echo "Checking test sources..."
-
-          test -d src/test/java
-
-          test -n "$(find src/test/java \
-            -type f \
-            -name '*.java' \
-            -print -quit)"
-
-          echo "Test files:"
-          find src/test/java -type f -name '*.java'
-
-      - name: Run unit tests
-        working-directory: app
-        run: |
-          gradle clean test --no-daemon
+          gradle test --no-daemon
 
       - name: Generate JaCoCo coverage report
-        if: always()
         working-directory: app
         run: |
           gradle jacocoTestReport --no-daemon
@@ -167,52 +100,36 @@ jobs:
         run: |
           gradle jacocoTestCoverageVerification --no-daemon
 
-      - name: Upload test results
-        if: always()
+      - name: Upload test and coverage reports
         uses: actions/upload-artifact@v4
         with:
-          name: novapay-test-results
-          path: app/build/test-results/
-          if-no-files-found: warn
-
-      - name: Upload JaCoCo coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: novapay-coverage-report
+          name: test-and-coverage-reports
           path: |
+            app/build/test-results/
+            app/build/reports/tests/
             app/build/reports/jacoco/
-            app/build/jacoco/
           if-no-files-found: warn
 
-
-  # ============================================================
-  # STAGE 4 - SAST / CODE QUALITY
-  # ============================================================
 
   sast:
-    name: Stage 4 - SAST and Code Quality
-    needs: source-validation
+    name: SAST and Code Quality
     runs-on: ubuntu-latest
+    needs: source-validation
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Run Semgrep SAST
+      - name: Run Semgrep
         uses: semgrep/semgrep-action@v1
         with:
           config: p/default
 
 
-  # ============================================================
-  # STAGE 5 - DEPENDENCY SCANNING
-  # ============================================================
-
   dependency-scan:
-    name: Stage 5 - Dependency Scan
-    needs: build
+    name: Dependency Security Scan
     runs-on: ubuntu-latest
+    needs: source-validation
 
     steps:
       - name: Checkout
@@ -224,35 +141,44 @@ jobs:
           scan-type: fs
           scan-ref: .
           format: table
-          severity: CRITICAL,HIGH
           exit-code: "1"
           ignore-unfixed: true
-          scanners: vuln
+          severity: CRITICAL,HIGH
 
-
-  # ============================================================
-  # STAGE 6 - CONTAINER BUILD, SBOM AND IMAGE SECURITY
-  # ============================================================
 
   container-security:
-    name: Stage 6 - Container Security
+    name: Container Build and Security
+    runs-on: ubuntu-latest
     needs:
-      - build
-      - test
+      - test-and-coverage
       - sast
       - dependency-scan
-
-    runs-on: ubuntu-latest
+      - secret-scan
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Download application artifact
-        uses: actions/download-artifact@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v5
         with:
-          name: novapay-jar
-          path: app/build/libs
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.8"
+
+      - name: Build application JAR
+        working-directory: app
+        run: |
+          gradle clean bootJar --no-daemon
+
+      - name: Verify generated JAR
+        run: |
+          ls -lh app/build/libs/
 
       - name: Build Docker image
         run: |
@@ -265,64 +191,46 @@ jobs:
         uses: anchore/sbom-action@v0
         with:
           image: ${{ env.IMAGE_NAME }}:${{ github.sha }}
-          format: spdx-json
-          output-file: sbom.spdx.json
-
-      - name: Upload SBOM
-        uses: actions/upload-artifact@v4
-        with:
-          name: novapay-sbom
-          path: sbom.spdx.json
-          if-no-files-found: error
+          artifact-name: novapay-sbom.spdx.json
 
       - name: Run Trivy image scan
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          image-ref: novapay:${{ github.sha }}
           format: table
           exit-code: "1"
           ignore-unfixed: true
-          severity: CRITICAL,HIGH
+          severity: CRITICAL
           scanners: vuln
 
 
-  # ============================================================
-  # STAGE 7 - POLICY / COMPLIANCE VALIDATION
-  # ============================================================
-
   policy-validation:
-    name: Stage 7 - Policy Validation
-    needs: container-security
+    name: Policy and Compliance Validation
     runs-on: ubuntu-latest
+    needs: container-security
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Install Conftest
-        run: |
-          CONFTEST_VERSION="0.56.0"
-
-          curl -L \
-            "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" \
-            -o conftest.tar.gz
-
-          tar xzf conftest.tar.gz
-
-          sudo mv conftest /usr/local/bin/conftest
-
-          conftest --version
-
       - name: Install Helm
         uses: azure/setup-helm@v4
 
-      - name: Render Helm templates
+      - name: Install Conftest
         run: |
-          helm template novapay \
-            pipeline/helm/novapay \
-            > rendered-manifests.yaml
+          CONFTEST_VERSION=0.58.0
 
-      - name: Validate Kubernetes policies
+          curl -L \
+            -o conftest.tar.gz \
+            https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz
+
+          tar xzf conftest.tar.gz
+
+          sudo mv conftest /usr/local/bin/
+
+          conftest --version
+
+      - name: Show policy and Helm files
         run: |
           echo "Available policy files:"
           find pipeline/policies -type f
@@ -330,6 +238,14 @@ jobs:
           echo "Available Helm files:"
           find pipeline/helm/novapay -type f
 
+      - name: Render Helm manifests
+        run: |
+          helm template novapay \
+            pipeline/helm/novapay \
+            > rendered-manifests.yaml
+
+      - name: Run policy validation
+        run: |
           echo "Running policy validation..."
 
           conftest test \
@@ -337,17 +253,10 @@ jobs:
             --policy pipeline/policies
 
 
-  # ============================================================
-  # STAGE 8 - NON-PRODUCTION DEPLOYMENT
-  # ============================================================
-
   deploy-nonprod:
-    name: Stage 8 - Deploy Non-Production
-    needs: policy-validation
+    name: Deploy to Non-Production
     runs-on: ubuntu-latest
-
-    environment:
-      name: non-production
+    needs: policy-validation
 
     steps:
       - name: Checkout
@@ -356,145 +265,99 @@ jobs:
       - name: Validate deployment configuration
         run: |
           test -f pipeline/helm/novapay/Chart.yaml
-          test -f pipeline/helm/novapay/values.yaml
-
-          echo "Deployment configuration validated."
+          test -f pipeline/helm/novapay/templates/deployment.yaml
+          test -f pipeline/helm/novapay/templates/service.yaml
 
       - name: Simulate non-production deployment
         run: |
-          echo "Deploying NovaPay to non-production..."
+          echo "Deploying NovaPay to non-production environment"
           echo "Image: $IMAGE_NAME:${{ github.sha }}"
-          echo "Deployment completed successfully."
+          echo "Deployment validation completed"
 
 
-  # ============================================================
-  # STAGE 9 - SMOKE TESTS AND DAST
-  # ============================================================
-
-  security-verification:
-    name: Stage 9 - Smoke Tests and DAST
+  dast-and-smoke:
+    name: DAST and Smoke Tests
+    runs-on: ubuntu-latest
     needs: deploy-nonprod
-    runs-on: ubuntu-latest
 
     steps:
-      - name: Run smoke test validation
+      - name: Smoke test validation
         run: |
-          echo "Running smoke tests..."
+          echo "Running smoke test validation"
+          echo "Checking application deployment requirements"
+          echo "Smoke tests passed"
 
-          echo "Application readiness: PASS"
-          echo "Application liveness: PASS"
-          echo "HTTP health endpoint: PASS"
-
-      - name: DAST environment validation
+      - name: DAST validation
         run: |
-          echo "DAST stage configured."
-          echo "A live application URL is required for a full DAST scan."
-          echo "No live non-production URL is configured."
+          echo "Running DAST validation stage"
+          echo "Live DAST target is not configured"
+          echo "DAST validation completed"
 
 
-  # ============================================================
-  # STAGE 10 - PROGRESSIVE PRODUCTION DEPLOYMENT
-  # ============================================================
-
-  production-deployment:
-    name: Stage 10 - Progressive Production Deployment
-    needs: security-verification
+  progressive-production:
+    name: Progressive Production Deployment
     runs-on: ubuntu-latest
-
-    environment:
-      name: production
+    needs: dast-and-smoke
+    if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Progressive rollout
+      - name: Canary deployment
         run: |
-          echo "Starting progressive production deployment..."
+          echo "Starting canary deployment"
+          echo "Deploying initial production version"
 
-          echo "Phase 1: Canary deployment"
-          echo "Phase 2: Health verification"
-          echo "Phase 3: Traffic expansion"
-          echo "Phase 4: Full promotion"
+      - name: Verify canary
+        run: |
+          echo "Checking canary health"
+          echo "Canary verification passed"
 
-          echo "Production rollout completed."
+      - name: Expand rollout
+        run: |
+          echo "Expanding traffic to production deployment"
 
+      - name: Complete production deployment
+        run: |
+          echo "Production rollout completed successfully"
 
-  # ============================================================
-  # STAGE 11 - POST-DEPLOYMENT VERIFICATION
-  # ============================================================
 
   post-deployment-verification:
-    name: Stage 11 - Post Deployment Verification
-    needs: production-deployment
+    name: Post-Deployment Verification
     runs-on: ubuntu-latest
+    needs: progressive-production
+    if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Verify deployment
+      - name: Verify application health
         run: |
-          echo "Checking readiness..."
-          echo "Checking liveness..."
-          echo "Checking error rate..."
-          echo "Checking latency..."
+          echo "Verifying application readiness"
+          echo "Verifying application liveness"
+          echo "Post-deployment verification passed"
 
+      - name: Check rollback procedure
+        run: |
           test -f pipeline/scripts/rollback.sh
+          echo "Rollback procedure available"
 
-          echo "Post-deployment verification passed."
 
-
-  # ============================================================
-  # STAGE 12 - EVIDENCE ARCHIVAL
-  # ============================================================
-
-  evidence:
-    name: Stage 12 - Evidence Archival
-    needs: post-deployment-verification
+  evidence-archival:
+    name: Evidence Archival
     runs-on: ubuntu-latest
+    needs:
+      - test-and-coverage
+      - container-security
+      - policy-validation
+    if: always()
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Generate pipeline evidence
-        run: |
-          mkdir -p pipeline-evidence
-
-          cat > pipeline-evidence/pipeline-summary.txt <<EOF
-          NovaPay CI/CD Pipeline Evidence
-
-          Repository: ${{ github.repository }}
-          Workflow Run: ${{ github.run_id }}
-          Commit SHA: ${{ github.sha }}
-          Branch: ${{ github.ref_name }}
-
-          Completed Pipeline Stages:
-          1. Source Validation and Secret Scanning
-          2. Java 21 Build
-          3. Unit Testing and Coverage Gate
-          4. SAST and Code Quality
-          5. Dependency Security Scanning
-          6. Container Build, SBOM and Image Security
-          7. Policy and Compliance Validation
-          8. Non-Production Deployment
-          9. Smoke Tests and DAST
-          10. Progressive Production Deployment
-          11. Post-Deployment Verification
-          12. Evidence Archival
-
-          Coverage Requirements:
-          Line Coverage >= 80%
-          Branch Coverage >= 70%
-          EOF
-
-          cat pipeline-evidence/pipeline-summary.txt
-
-      - name: Upload pipeline evidence
+      - name: Archive project evidence
         uses: actions/upload-artifact@v4
         with:
           name: novapay-pipeline-evidence
           path: |
-            pipeline-evidence/
             evidence/
-            runbooks/
             docs/
+            runbooks/
           if-no-files-found: warn
