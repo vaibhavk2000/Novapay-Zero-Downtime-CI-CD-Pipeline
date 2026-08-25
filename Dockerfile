@@ -1,14 +1,12 @@
-FROM eclipse-temurin:21-jre-jammy
-
-RUN useradd --system --uid 10001 --no-create-home appuser
+FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
 COPY app/build/libs/*.jar app.jar
 
-RUN chown appuser:appuser app.jar
+RUN useradd -r -u 10001 novapay
 
-USER appuser
+USER 10001
 
 EXPOSE 8080
 
