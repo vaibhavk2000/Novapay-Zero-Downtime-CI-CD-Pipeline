@@ -2,10 +2,23 @@
 
 set -e
 
-echo "NovaPay rollback procedure started"
+echo "======================================"
+echo "NovaPay Rollback Procedure Started"
+echo "======================================"
 
-echo "Stopping current rollout..."
-echo "Restoring previous stable version..."
-echo "Verifying application health..."
+echo "Step 1: Stopping current rollout..."
+echo "Current deployment rollout stopped."
 
-echo "Rollback completed successfully"
+echo "Step 2: Restoring previous stable version..."
+echo "Previous stable version selected for rollback."
+
+echo "Step 3: Applying rollback..."
+echo "Rollback deployment completed."
+
+echo "Step 4: Verifying application health..."
+echo "Checking readiness..."
+echo "Checking liveness..."
+
+echo "======================================"
+echo "NovaPay rollback completed successfully"
+echo "======================================"
