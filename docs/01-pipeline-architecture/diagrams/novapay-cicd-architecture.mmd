@@ -1,0 +1,14 @@
+flowchart LR
+A[Source / PR] --> B[Source Validation]
+B --> C[Build + Tests]
+C --> D[Coverage Gate]
+B --> E[SAST + Dependency + Secret Scan]
+C --> F[Container Build + SBOM + Image Scan]
+D --> G[Policy Gate]
+E --> G
+F --> G
+G --> H[Non-Production Deployment]
+H --> I[DAST + Smoke Tests]
+I --> J[Progressive Production]
+J --> K[Post-Deployment Verification]
+K --> L[Evidence Archive]

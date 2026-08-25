@@ -1,20 +1,36 @@
-# Deliverable 6 — Automated Rollback
+# Deliverable 6 — Rollback Specification
 
-## Category A — immediate (<60 seconds)
-Triggers include critical 5xx rate, readiness collapse, severe latency regression, crash loops and failed smoke checks.
+## Category A — Immediate, target <60 seconds
+Examples:
+1. readiness failure after deployment
+2. critical health endpoint failure
+3. severe sustained HTTP 5xx increase
+4. critical dependency failure directly caused by the release
+5. unsafe version/configuration mismatch
 
-## Category B — escalated (<15 minutes)
-Triggers include rising saturation, connection-pool exhaustion, downstream timeout regression and SLO burn.
+Action: freeze promotion, route away from the candidate or undo the rollout, then verify the stable version.
 
-## Category C — manual decision
-Business/regulatory decisions requiring incident command approval.
+## Category B — Escalated, target <15 minutes
+Examples:
+1. sustained p99 latency regression
+2. connection-pool exhaustion
+3. increasing downstream timeout rate
+4. resource saturation with customer impact
 
-## Workflow
-1. Detect
-2. Correlate
-3. Freeze promotion
-4. Roll back traffic/workload
-5. Verify service health
-6. Notify stakeholders
-7. Open incident
-8. Complete postmortem
+Action: alert the incident owner, correlate release and infrastructure signals, and decide rollback or mitigation within the escalation target.
+
+## Category C — Manual decision
+Use when data integrity, external settlement, or business/regulatory impact requires an incident-command decision.
+
+## Eight-step execution
+1. Detect.
+2. Correlate.
+3. Freeze further promotion.
+4. Select rollback target.
+5. Execute rollback.
+6. Verify health and smoke tests.
+7. Notify stakeholders and record the incident.
+8. Complete postmortem and corrective actions.
+
+## Post-rollback verification
+Compare error rate, latency, saturation and customer-impact indicators with the pre-release baseline. Confirm stable pod readiness and successful smoke transactions before closing the rollback.

@@ -1,51 +1,42 @@
 # ERRATA
 
-## Project Notes and Corrections
+This register separates **assessment-source corrections** from **project implementation limitations**.
 
-### 1. Simulated Deployment Environments
+## Required correction register
 
-The CI/CD pipeline includes stages for non-production deployment, progressive production deployment, DAST, smoke testing, and post-deployment verification.
+The assessment requires three deliberate technical errors to be identified and corrected. The current project repository does not contain the complete source locations and evidence for all three errors, so they must not be invented.
 
-For this project submission, these stages are implemented as pipeline validation and simulation steps because no external Kubernetes cluster or production infrastructure is connected to the repository.
+### Error 1 — Assessment source
+- Source location: **To be completed from the assessment document**
+- Original statement: **To be copied exactly**
+- Why it is incorrect: **To be supported by evidence**
+- Correct statement: **To be completed**
+- Evidence/reference: **To be completed**
 
-The pipeline architecture and workflow sequencing remain representative of the intended production CI/CD process.
+### Error 2 — Assessment source
+- Source location: **To be completed from the assessment document**
+- Original statement: **To be copied exactly**
+- Why it is incorrect: **To be supported by evidence**
+- Correct statement: **To be completed**
+- Evidence/reference: **To be completed**
 
-### 2. DAST Validation
+### Error 3 — Assessment source
+- Source location: **To be completed from the assessment document**
+- Original statement: **To be copied exactly**
+- Why it is incorrect: **To be supported by evidence**
+- Correct statement: **To be completed**
+- Evidence/reference: **To be completed**
 
-A full Dynamic Application Security Testing scan requires a running and externally accessible application environment.
+## Project implementation limitations
 
-Therefore, the current DAST stage validates the deployment security stage and documents the requirement for a live target environment.
+### Simulated deployment environments
+The repository does not connect to an external Kubernetes cluster or production infrastructure. Non-production deployment, progressive production deployment, DAST, smoke testing and post-deployment verification are therefore represented by validation/simulation steps.
 
-### 3. Progressive Production Deployment
+### DAST limitation
+A full dynamic scan requires a reachable running target. The project documents the intended DAST gate, but a live target must be supplied before treating this as a production DAST result.
 
-The progressive production deployment stage demonstrates the intended rollout sequence:
+### Progressive delivery limitation
+The intended canary sequence is represented in the workflow and documentation. Actual weighted traffic shifting requires an integrated platform such as Istio, Argo Rollouts, or an equivalent deployment controller.
 
-1. Canary deployment
-2. Health verification
-3. Traffic expansion
-4. Full promotion
-
-The current implementation simulates these phases because a live production environment is not configured.
-
-### 4. Coverage Quality Gate
-
-The project implements JaCoCo coverage verification with the following thresholds:
-
-- Minimum line coverage: 80%
-- Minimum branch coverage: 70%
-
-A pipeline failure occurs if the configured coverage thresholds are not satisfied.
-
-### 5. Policy Validation
-
-Kubernetes policy validation is performed using Helm-rendered manifests and Conftest/Rego policies.
-
-The policies verify:
-
-- Containers run as non-root
-- Liveness probes are configured
-- Readiness probes are configured
-
-## Conclusion
-
-These notes document the project implementation decisions and environment limitations. All implemented CI/CD pipeline stages were successfully validated in GitHub Actions.
+### Coverage and policy controls
+JaCoCo enforces the configured line and branch coverage thresholds. Helm-rendered manifests are checked by Rego/Conftest policies for the repository's configured workload requirements.

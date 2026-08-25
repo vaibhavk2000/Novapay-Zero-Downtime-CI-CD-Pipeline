@@ -1,13 +1,25 @@
-# Deliverable 7 — Operations Runbook and Incident Playbook
+# Deliverable 7 — Runbook and Incident Playbook
 
-## Pre-deployment checklist
-Validate change approval, artifact identity, vulnerability status, policy results, migration compatibility, capacity, rollback target and monitoring.
+This deliverable is implemented through:
+- `runbooks/deployment-runbook.md`
+- `runbooks/incident-playbook.md`
 
-## Severity
-SEV1: critical customer/business impact.
-SEV2: major degradation.
-SEV3: limited impact.
-SEV4: low urgency.
+## Evidence checklist
+Before deployment, capture:
+1. approved change/version
+2. successful CI run
+3. artifact/image digest
+4. security and policy results
+5. migration compatibility decision
+6. rollback target
+7. monitoring availability
+8. named deployment/incident owner
 
-## Incident workflow
-Detect → acknowledge → triage → communicate → mitigate/rollback → verify → recover → postmortem.
+## Severity model
+Define four levels in the incident playbook:
+- Sev 1: critical customer or regulatory impact
+- Sev 2: major service degradation
+- Sev 3: limited degradation
+- Sev 4: minor issue or investigation
+
+Response targets, communication channels and escalation owners must be maintained by the operating team.
