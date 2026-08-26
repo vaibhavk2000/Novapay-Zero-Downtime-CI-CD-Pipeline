@@ -1,152 +1,159 @@
-# NovaPay – DevOps and Cloud Engineering CI/CD Project
+# NovaPay Zero-Downtime CI/CD Pipeline
 
 ## Overview
 
-NovaPay is a sample payment service used to demonstrate the design and implementation of a secure, automated CI/CD pipeline.
+This project implements a multi-stage DevOps and Cloud Engineering CI/CD pipeline for **NovaPay**.
 
-This project integrates application development, automated testing, code coverage, security scanning, containerization, policy-as-code, deployment validation, rollback planning, observability, and evidence collection.
+The pipeline is designed to validate source code, test application quality, perform security scanning, build and scan a container image, validate deployment policies, simulate environment promotion, perform deployment verification, and archive evidence.
 
-The CI/CD pipeline is implemented using GitHub Actions and is designed around a quality and security gate approach. A failure in a mandatory stage prevents promotion to later stages.
+The pipeline is implemented using **GitHub Actions** and is triggered on pushes and pull requests to the `main` branch.
 
 ---
 
-## CI/CD Pipeline
+# CI/CD Pipeline Architecture
 
-The NovaPay pipeline includes the following stages:
-
-1. Source validation
-2. Secret scanning
-3. Application build using Java 21
-4. Unit and integration testing
-5. Code coverage verification
-6. SAST and code-quality scanning
-7. Dependency vulnerability scanning
-8. Docker container build
-9. SBOM generation
-10. Container image security scanning
-11. Helm manifest rendering
-12. Policy and compliance validation
-13. Non-production deployment validation
-14. Smoke testing and DAST validation
-15. Progressive production deployment
-16. Post-deployment verification
-17. Evidence archival
-
-### Pipeline Flow
+The actual pipeline flow is:
 
 ```text
-Source Validation
-        |
-        v
-Application Build
-        |
-        +-------------------+-------------------+
-        |                   |                   |
-        v                   v                   v
-      Tests               SAST          Dependency Scan
-        |                   |                   |
-        +-------------------+-------------------+
-                            |
-                            v
-              Container Build + SBOM + Scan
-                            |
-                            v
-                     Policy Validation
-                            |
-                            v
-                Non-Production Deployment
-                            |
-                            v
-                    Smoke Tests / DAST
-                            |
-                            v
-             Progressive Production Deployment
-                            |
-                            v
-              Post-Deployment Verification
-                            |
-                            v
-                    Evidence Archival
-```
+Git Push / Pull Request
+        │
+        ▼
+┌─────────────────────────┐
+│    Source Validation    │
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│ Test and Coverage Gate  │
+└────────────┬────────────┘
+             │
+             ├──────────────────────────┐
+             │                          │
+             ▼                          ▼
+┌──────────────────┐          ┌──────────────────────┐
+│ Secret Scanning  │          │ SAST and Code Quality│
+└────────┬─────────┘          └──────────┬───────────┘
+         │                               │
+         │        ┌──────────────────────┘
+         │        │
+         ▼        ▼
+   ┌──────────────────────────┐
+   │ Dependency Security Scan │
+   └────────────┬─────────────┘
+                │
+                ▼
+┌──────────────────────────────────┐
+│ Container Build and Security     │
+│                                  │
+│ • Build application JAR          │
+│ • Build Docker image             │
+│ • Generate security information  │
+│ • Scan container image           │
+└───────────────┬──────────────────┘
+                │
+                ▼
+┌──────────────────────────────────┐
+│ Policy and Compliance Validation │
+│                                  │
+│ • Helm validation                │
+│ • Rego policies                  │
+│ • Non-root validation            │
+│ • Health probe validation        │
+└───────────────┬──────────────────┘
+                │
+        ┌───────┴────────┐
+        │                │
+        ▼                ▼
+┌───────────────────┐  ┌──────────────────┐
+│ Deploy to         │  │ Evidence Archive │
+│ Non-Production    │  └──────────────────┘
+└─────────┬─────────┘
+          │
+          ▼
+┌───────────────────┐
+│ DAST and          │
+│ Smoke Tests       │
+└─────────┬─────────┘
+          │
+          ▼
+┌──────────────────────────────┐
+│ Progressive Production       │
+│ Deployment                   │
+└──────────────┬───────────────┘
+               │
+               ▼
+┌──────────────────────────────┐
+│ Post-Deployment Verification │
+└──────────────────────────────┘
+````
 
 ---
 
-## Technology Stack
+# Pipeline Stages
 
-| Technology | Purpose |
-|---|---|
-| Java 21 | Application runtime |
-| Spring Boot | Application framework |
-| Gradle 8.8 | Build automation |
-| GitHub Actions | CI/CD automation |
-| JUnit | Automated testing |
-| JaCoCo | Code coverage verification |
-| Gitleaks | Secret scanning |
-| Semgrep | Static application security testing |
-| Trivy | Dependency and container security scanning |
-| Docker | Containerization |
-| SBOM | Software component inventory |
-| Helm | Kubernetes application packaging |
-| Conftest | Policy validation |
-| Rego | Policy-as-code |
-| Terraform | Infrastructure configuration |
-| Grafana | Observability dashboard configuration |
+The GitHub Actions workflow contains the following stages.
+
+| Stage                             | Purpose                                                          |
+| --------------------------------- | ---------------------------------------------------------------- |
+| Source Validation                 | Verifies required source and project files                       |
+| Secret Scanning                   | Detects exposed secrets and sensitive information                |
+| Test and Coverage Gate            | Builds and tests the Java application                            |
+| SAST and Code Quality             | Performs static application security analysis                    |
+| Dependency Security Scan          | Checks dependencies and filesystem vulnerabilities               |
+| Container Build and Security      | Builds the Docker image and performs container security scanning |
+| Policy and Compliance             | Validates Helm manifests against Rego policies                   |
+| Deploy to Non-Production          | Performs non-production deployment validation                    |
+| DAST and Smoke Tests              | Performs smoke and dynamic security validation                   |
+| Progressive Production Deployment | Simulates progressive production rollout                         |
+| Post-Deployment Verification      | Verifies deployment and rollback readiness                       |
+| Evidence Archival                 | Stores generated reports and pipeline evidence                   |
 
 ---
 
-## Quality Gate
+# Technology Stack
 
-The project enforces code coverage requirements using JaCoCo.
+## Application
 
-| Coverage Type | Minimum Required |
-|---|---:|
-| Line Coverage | 80% |
-| Branch Coverage | 70% |
+* Java 21
+* Spring Boot
+* Gradle 8.8
 
-If either coverage threshold is not satisfied, the pipeline fails and promotion is blocked.
+## CI/CD
 
----
+* GitHub Actions
 
-## Security Controls
+## Containerization
 
-The pipeline includes multiple security gates:
+* Docker
 
-- Secret scanning using Gitleaks
-- Static Application Security Testing using Semgrep
-- Dependency vulnerability scanning using Trivy
-- Docker container image scanning
-- SBOM generation
-- Kubernetes policy validation using Conftest and Rego
+## Security
 
-Security or compliance failures block further pipeline progression.
+* Gitleaks
+* Semgrep
+* Trivy
 
----
+## Policy as Code
 
-## Policy Validation
+* Open Policy Agent
+* Rego
+* Conftest
 
-Kubernetes manifests are rendered using Helm before policy evaluation.
+## Deployment Configuration
 
-The project includes policies that verify:
+* Helm
+* Kubernetes manifests
 
-- Containers run as non-root
-- Deployments include a liveness probe
-- Deployments include a readiness probe
+## Infrastructure
 
-Policy files are located in:
+* Terraform
 
-```text
-pipeline/policies/
-```
+## Observability
 
-Helm resources are located in:
-
-```text
-pipeline/helm/novapay/
-```
+* Grafana dashboard configuration
 
 ---
 
-## Repository Structure
+# Repository Structure
 
 ```text
 .
@@ -155,11 +162,28 @@ pipeline/helm/novapay/
 │       └── ci-pipeline.yml
 │
 ├── app/
-│   ├── src/
-│   │   ├── main/
-│   │   └── test/
 │   ├── build.gradle
 │   └── settings.gradle
+│
+├── dashboards/
+│   ├── grafana/
+│   └── mockups/
+│
+├── docs/
+│   ├── 01-pipeline-architecture/
+│   ├── 02-deployment-strategies/
+│   ├── 03-compliance-gates/
+│   ├── 04-database-migration/
+│   ├── 05-environment-promotion/
+│   ├── 06-rollback-specification/
+│   ├── 07-runbook-playbook/
+│   └── 08-observability/
+│
+├── evidence/
+│   ├── screenshots/
+│   ├── test-results/
+│   ├── reflections.md
+│   └── self-assessment.md
 │
 ├── pipeline/
 │   ├── helm/
@@ -172,29 +196,9 @@ pipeline/helm/novapay/
 │   └── terraform/
 │       └── main.tf
 │
-├── docs/
-│   ├── 01-pipeline-architecture/
-│   ├── 02-deployment-strategies/
-│   ├── 03-compliance-gates/
-│   ├── 04-database-migration/
-│   ├── 05-environment-promotion/
-│   ├── 06-rollback-specification/
-│   ├── 07-runbook-playbook/
-│   └── 08-observability/
-│
-├── dashboards/
-│   ├── grafana/
-│   └── mockups/
-│
 ├── runbooks/
 │   ├── deployment-runbook.md
 │   └── incident-playbook.md
-│
-├── evidence/
-│   ├── screenshots/
-│   ├── test-results/
-│   ├── reflections.md
-│   └── self-assessment.md
 │
 ├── Dockerfile
 ├── ERRATA.md
@@ -203,54 +207,168 @@ pipeline/helm/novapay/
 
 ---
 
-## Running the Application
+# Pipeline Execution Flow
 
-Navigate to the application directory:
+The pipeline begins when a developer pushes code or opens a pull request.
 
-```bash
-cd app
+```text
+Developer
+    │
+    ▼
+GitHub Repository
+    │
+    ▼
+GitHub Actions
+    │
+    ▼
+Source Validation
+    │
+    ▼
+Test and Coverage Gate
+    │
+    ▼
+Security Validation
+    ├── Secret Scanning
+    ├── SAST and Code Quality
+    └── Dependency Security Scan
+    │
+    ▼
+Container Build and Security
+    │
+    ▼
+Policy and Compliance Validation
+    │
+    ├──────────────► Evidence Archive
+    │
+    ▼
+Non-Production Deployment
+    │
+    ▼
+DAST and Smoke Tests
+    │
+    ▼
+Progressive Production Deployment
+    │
+    ▼
+Post-Deployment Verification
 ```
+
+---
+
+# Security and Quality Gates
+
+The pipeline includes multiple validation gates.
+
+## Secret Scanning
+
+Secret scanning checks the repository for accidentally committed credentials, tokens, API keys, and other sensitive information.
+
+## Test and Coverage
+
+The application is built and tested using Gradle.
+
+The pipeline validates application quality before allowing the next stages to proceed.
+
+## SAST and Code Quality
+
+Static analysis checks the application source code for potential security and quality issues.
+
+## Dependency Security
+
+Dependencies and project files are scanned for known vulnerabilities.
+
+## Container Security
+
+The application is packaged into a Docker image and scanned for vulnerabilities.
+
+## Policy and Compliance
+
+Helm and Kubernetes deployment configurations are validated against Rego policies.
+
+The policies check requirements such as:
+
+* Containers should not run as root.
+* Deployments should include required health probes.
+
+---
+
+# Deployment Strategy
+
+The deployment flow follows this sequence:
+
+```text
+Validated Build
+       │
+       ▼
+Non-Production
+       │
+       ▼
+Smoke Tests
+       │
+       ▼
+DAST Validation
+       │
+       ▼
+Progressive Production Deployment
+       │
+       ▼
+Post-Deployment Verification
+```
+
+A deployment is promoted only after the required preceding stages complete successfully.
+
+---
+
+# Rollback Strategy
+
+If deployment verification fails, the rollout should be stopped and the rollback procedure can be invoked.
+
+The rollback script is located at:
+
+```text
+pipeline/scripts/rollback.sh
+```
+
+The pipeline also verifies that the rollback procedure is available during post-deployment verification.
+
+---
+
+# Evidence and Reporting
+
+The project stores supporting assessment evidence in the following locations:
+
+```text
+evidence/
+├── screenshots/
+├── test-results/
+├── reflections.md
+└── self-assessment.md
+```
+
+Pipeline evidence and generated reports can also be uploaded as GitHub Actions artifacts.
+
+---
+
+# Running the Application Locally
 
 Build the application:
 
 ```bash
-gradle clean build
-```
-
-Run the application:
-
-```bash
-gradle bootRun
-```
-
----
-
-## Running Tests
-
-Run the automated tests:
-
-```bash
 cd app
-gradle test --no-daemon
+gradle clean bootJar --no-daemon
 ```
 
-Generate the JaCoCo coverage report:
+The generated JAR can be found in:
 
-```bash
-gradle jacocoTestReport --no-daemon
-```
-
-Verify the coverage quality gate:
-
-```bash
-gradle jacocoTestCoverageVerification --no-daemon
+```text
+app/build/libs/
 ```
 
 ---
 
-## Docker
+# Building the Docker Image
 
-Build the Docker image:
+From the project root:
 
 ```bash
 docker build -t novapay:latest .
@@ -264,146 +382,67 @@ docker run -p 8080:8080 novapay:latest
 
 ---
 
-## CI/CD Workflow
+# Running the CI/CD Pipeline
 
-The GitHub Actions workflow is located at:
+The pipeline automatically runs when changes are pushed to the `main` branch or when a pull request targets `main`.
+
+```text
+Push / Pull Request
+        ↓
+GitHub Actions
+        ↓
+NovaPay CI/CD
+```
+
+Workflow file:
 
 ```text
 .github/workflows/ci-pipeline.yml
 ```
 
-The workflow automatically runs on:
-
-- Push to `main`
-- Push to `release/**`
-- Pull requests targeting `main`
-
 ---
 
-## Deployment Strategy
+# Project Outcome
 
-The pipeline follows a progressive promotion model:
+The NovaPay project demonstrates an end-to-end DevOps pipeline containing:
 
-```text
-Development
-     |
-     v
-Quality and Security Gates
-     |
-     v
-Non-Production
-     |
-     v
-Smoke Testing / DAST
-     |
-     v
-Progressive Production Deployment
-     |
-     v
-Post-Deployment Verification
-```
+* Automated source validation
+* Application build and testing
+* Security scanning
+* Dependency scanning
+* Container build and vulnerability scanning
+* Policy-as-code validation
+* Non-production deployment validation
+* Smoke and DAST testing
+* Progressive production deployment
+* Post-deployment verification
+* Rollback readiness validation
+* Evidence archival
 
-Production rollout follows the planned stages:
+## Successful Pipeline
 
-1. Canary deployment
-2. Health verification
-3. Traffic expansion
-4. Full promotion
-
-If a mandatory verification fails, promotion should stop and the rollback procedure should be followed.
-
----
-
-## Rollback
-
-The rollback procedure is documented and supported through:
+The complete pipeline has successfully executed all configured stages in GitHub Actions.
 
 ```text
-pipeline/scripts/rollback.sh
-```
-
-Additional operational instructions are available in:
-
-```text
-runbooks/deployment-runbook.md
-runbooks/incident-playbook.md
+Source Validation                 ✓
+Secret Scanning                   ✓
+Test and Coverage Gate            ✓
+SAST and Code Quality             ✓
+Dependency Security Scan          ✓
+Container Build and Security      ✓
+Policy and Compliance             ✓
+Deploy to Non-Production          ✓
+DAST and Smoke Tests              ✓
+Progressive Production Deployment ✓
+Post-Deployment Verification     ✓
+Evidence Archival                 ✓
 ```
 
 ---
 
-## Observability
-
-The project includes observability documentation and dashboard configuration.
-
-Grafana dashboard configuration:
-
-```text
-dashboards/grafana/novapay-overview.json
-```
-
-Dashboard mockup documentation:
-
-```text
-dashboards/mockups/README.md
-```
-
-The observability design focuses on:
-
-- Application availability
-- Readiness and liveness
-- Request volume
-- Error rate
-- Response latency
-- Deployment status
-- Rollback status
-
----
-
-## Evidence
-
-Pipeline and project evidence are organized under:
-
-```text
-evidence/
-```
-
-This includes:
-
-- Successful pipeline screenshots
-- Test and coverage evidence
-- Project reflections
-- Self-assessment
-- Pipeline artifacts
-
----
-
-## Documentation
-
-Detailed documentation is available in the `docs/` directory.
-
-Key documents include:
-
-- Pipeline architecture
-- Deployment strategies
-- Compliance gates
-- Database migration strategy
-- Environment promotion
-- Rollback specification
-- Runbooks and playbooks
-- Observability design
-
----
-
-## Project Status
-
-**Status: Completed**
-
-The NovaPay CI/CD pipeline successfully integrates automated build, testing, coverage verification, security scanning, container security, policy validation, deployment stages, post-deployment verification, and evidence archival.
-
----
-
-## Author
+# Author
 
 **Vaibhav Kunghatkar**
 
-DevOps / Cloud Engineering Project
+DevOps & Cloud Engineer Project
+NovaPay Zero-Downtime CI/CD Pipeline
