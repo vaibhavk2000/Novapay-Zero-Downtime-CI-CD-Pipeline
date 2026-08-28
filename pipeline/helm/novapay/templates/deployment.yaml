@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: novapay
+
 spec:
   replicas: 2
 
@@ -15,10 +16,22 @@ spec:
         app: novapay
 
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+
       containers:
         - name: novapay
           image: novapay:1.0.0
           imagePullPolicy: IfNotPresent
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
 
           ports:
             - containerPort: 8080
