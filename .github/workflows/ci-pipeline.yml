@@ -18,9 +18,11 @@ env:
   IMAGE_NAME: novapay
 
 jobs:
+
   source-validation:
     name: Source Validation
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -31,21 +33,26 @@ jobs:
           test -f app/settings.gradle
           test -f Dockerfile
           test -f pipeline/helm/novapay/Chart.yaml
+          test -f pipeline/helm/novapay/templates/deployment.yaml
+          test -f pipeline/helm/novapay/templates/service.yaml
           test -f pipeline/policies/require-probes.rego
           test -f pipeline/policies/require-nonroot.rego
           test -f pipeline/policies/require-resource-limits.rego
           test -f pipeline/policies/disallow-privileged.rego
           test -f pipeline/policies/disallow-latest-tag.rego
           test -f pipeline/policies/require-readonly-rootfs.rego
+          test -f pipeline/scripts/rollback.sh
 
       - name: Show repository structure
         run: |
           find . -maxdepth 4 -type f | sort
 
+
   secret-scan:
     name: Secret Scanning
     runs-on: ubuntu-latest
     needs: source-validation
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -55,10 +62,12 @@ jobs:
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
 
+
   test-and-coverage:
     name: Test and Coverage Gate
     runs-on: ubuntu-latest
     needs: source-validation
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -77,6 +86,9 @@ jobs:
 
       - name: Check Java version
         run: java -version
+
+      - name: Check Gradle version
+        run: gradle --version
 
       - name: Build application
         working-directory: app
@@ -108,10 +120,12 @@ jobs:
             app/build/reports/jacoco/
           if-no-files-found: warn
 
+
   sast:
     name: SAST and Code Quality
     runs-on: ubuntu-latest
     needs: source-validation
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -121,10 +135,12 @@ jobs:
         with:
           config: p/default
 
+
   dependency-scan:
     name: Dependency Security Scan
     runs-on: ubuntu-latest
     needs: source-validation
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -139,6 +155,7 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 
+
   container-security:
     name: Container Build and Security
     runs-on: ubuntu-latest
@@ -147,6 +164,7 @@ jobs:
       - sast
       - dependency-scan
       - secret-scan
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -195,10 +213,12 @@ jobs:
           severity: CRITICAL
           scanners: vuln
 
+
   policy-validation:
     name: Policy and Compliance Validation
     runs-on: ubuntu-latest
     needs: container-security
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -209,37 +229,47 @@ jobs:
       - name: Install Conftest
         run: |
           CONFTEST_VERSION=0.58.0
+
           curl -L \
             -o conftest.tar.gz \
             https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz
+
           tar xzf conftest.tar.gz
+
           sudo mv conftest /usr/local/bin/
+
           conftest --version
 
       - name: Show policy and Helm files
         run: |
           echo "Available policy files:"
           find pipeline/policies -type f
+
           echo "Available Helm files:"
           find pipeline/helm/novapay -type f
 
       - name: Render Helm manifests
         run: |
-          helm template novapay \
-            pipeline/helm/novapay \
-            > rendered-manifests.yaml
+          helm template novapay pipeline/helm/novapay > rendered-manifests.yaml
+
+          echo "Rendered manifests successfully"
+
+          cat rendered-manifests.yaml
 
       - name: Run policy validation
         run: |
           echo "Running policy validation..."
+
           conftest test \
             rendered-manifests.yaml \
             --policy pipeline/policies
+
 
   deploy-nonprod:
     name: Deploy to Non-Production
     runs-on: ubuntu-latest
     needs: policy-validation
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -256,10 +286,12 @@ jobs:
           echo "Image: $IMAGE_NAME:${{ github.sha }}"
           echo "Deployment validation completed"
 
+
   dast-and-smoke:
     name: DAST and Smoke Tests
     runs-on: ubuntu-latest
     needs: deploy-nonprod
+
     steps:
       - name: Smoke test validation
         run: |
@@ -273,11 +305,13 @@ jobs:
           echo "Live DAST target is not configured"
           echo "DAST validation completed"
 
+
   progressive-production:
     name: Progressive Production Deployment
     runs-on: ubuntu-latest
     needs: dast-and-smoke
     if: github.ref == 'refs/heads/main'
+
     steps:
       - name: Canary deployment
         run: |
@@ -297,11 +331,13 @@ jobs:
         run: |
           echo "Production rollout completed successfully"
 
+
   post-deployment-verification:
     name: Post-Deployment Verification
     runs-on: ubuntu-latest
     needs: progressive-production
     if: github.ref == 'refs/heads/main'
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -317,6 +353,7 @@ jobs:
           test -f pipeline/scripts/rollback.sh
           echo "Rollback procedure available"
 
+
   evidence-archival:
     name: Evidence Archival
     runs-on: ubuntu-latest
@@ -325,6 +362,7 @@ jobs:
       - container-security
       - policy-validation
     if: always()
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
