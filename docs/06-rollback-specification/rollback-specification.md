@@ -34,3 +34,18 @@ Use when data integrity, external settlement, or business/regulatory impact requ
 
 ## Post-rollback verification
 Compare error rate, latency, saturation and customer-impact indicators with the pre-release baseline. Confirm stable pod readiness and successful smoke transactions before closing the rollback.
+<<<<<<< HEAD
+=======
+
+## Independence from the primary deployment path
+Per the Cloudflare case study lesson (`ERRATA.md` Error 2 — the July 2019 outage took 27 minutes
+to resolve specifically because rollback depended on the same control plane the faulty change had
+degraded), NovaPay's rollback mechanism operates at the traffic-routing (mesh/ingress) layer
+rather than depending on application health or the CI/CD control plane. See the rollback decision
+flow diagram: `docs/02-deployment-strategies/diagrams/rollback-decision-flow.png`.
+
+## Regulatory mapping
+This specification implements RBI Master Direction §4.2 (change management — rollback
+procedures) and §6.3 (incident management and business continuity). See
+`docs/03-compliance-gates/compliance-gates.md` for the full RBI/PCI-DSS gate mapping.
+>>>>>>> 6c5a403 (update in project)

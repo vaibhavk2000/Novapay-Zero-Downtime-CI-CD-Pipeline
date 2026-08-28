@@ -1,0 +1,11 @@
+flowchart TD
+    START["Deployment live<br/>metrics streaming"] --> CHECK{"Metric breach?"}
+    CHECK -->|"No"| CONTINUE["Continue bake window"]
+    CONTINUE --> CHECK
+    CHECK -->|"Category A<br/>5xx>5%, health fail x3,<br/>OOM, CrashLoopBackOff"| AUTO["Immediate auto-rollback<br/>less than 60s, no human step"]
+    CHECK -->|"Category B<br/>p99>2x baseline 5min,<br/>error budget burn>10x"| PAGE["Page on-call<br/>15 min escalation window"]
+    PAGE -->|"Acknowledged + fixed"| CONTINUE
+    PAGE -->|"No response in window"| AUTO
+    CHECK -->|"Category C<br/>gradual degradation,<br/>support tickets, compliance flag"| MANUAL["Surface to SRE + Release Manager<br/>for judgment call"]
+    AUTO --> VERIFY["Post-rollback verification<br/>smoke test + metric comparison"]
+    VERIFY --> INCIDENT["Open incident + postmortem"]

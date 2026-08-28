@@ -1,0 +1,12 @@
+flowchart TB
+    subgraph Ingress["Istio Ingress"]
+        VS["VirtualService: payments-svc"]
+    end
+    VS -->|"100% today"| BLUE["payments-svc-blue<br/>LIVE"]
+    VS -.->|"0% -> 1-2% -> 10% -> 50% -> 100%"| GREEN["payments-svc-green<br/>candidate release"]
+    BLUE --> DB[("Shared PostgreSQL<br/>novapay-shared")]
+    GREEN --> DB
+    BLUE --> REDIS[("Redis session store")]
+    GREEN --> REDIS
+    GREEN -->|"canary metrics"| PROM["Prometheus / Grafana"]
+    PROM -->|"breach -> rollback"| VS

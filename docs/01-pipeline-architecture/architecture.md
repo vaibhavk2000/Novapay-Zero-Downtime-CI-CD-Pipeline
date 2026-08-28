@@ -1,5 +1,12 @@
 # Deliverable 1 — Pipeline Architecture
 
+<<<<<<< HEAD
+=======
+## Architecture diagram
+
+![NovaPay CI/CD Pipeline Architecture](diagrams/novapay-cicd-architecture.png)
+
+>>>>>>> 6c5a403 (update in project)
 ## 1. Overview
 
 NovaPay uses a regulated CI/CD pipeline designed to provide fast developer feedback while enforcing quality, security, compliance and deployment controls.

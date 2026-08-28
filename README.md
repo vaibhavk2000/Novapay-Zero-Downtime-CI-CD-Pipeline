@@ -8,6 +8,18 @@ The pipeline is designed to validate source code, test application quality, perf
 
 The pipeline is implemented using **GitHub Actions** and is triggered on pushes and pull requests to the `main` branch.
 
+<<<<<<< HEAD
+=======
+## Key deliverables at a glance
+- **Architecture, deployment, and rollback diagrams:** `docs/*/diagrams/*.png`
+- **RBI Master Direction / PCI-DSS v4.0 compliance mapping:** `docs/03-compliance-gates/compliance-gates.md`
+- **5-phase expand-contract database migration with compatibility matrix:** `docs/04-database-migration/database-migration.md`
+- **Six policy-as-code gates (Rego/Conftest):** `pipeline/policies/`
+- **Deliberate error findings (3, with textual evidence):** `ERRATA.md`
+- **TRC approval presentation:** `evidence/trc-presentation.pdf`
+- **Honest status of simulated vs. live pipeline stages:** `evidence/self-assessment.md`
+
+>>>>>>> 6c5a403 (update in project)
 ---
 
 # CI/CD Pipeline Architecture
