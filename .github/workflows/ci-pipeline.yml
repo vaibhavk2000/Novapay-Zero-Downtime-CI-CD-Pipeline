@@ -33,13 +33,10 @@ jobs:
           test -f pipeline/helm/novapay/Chart.yaml
           test -f pipeline/policies/require-probes.rego
           test -f pipeline/policies/require-nonroot.rego
-<<<<<<< HEAD
-=======
           test -f pipeline/policies/require-resource-limits.rego
           test -f pipeline/policies/disallow-privileged.rego
           test -f pipeline/policies/disallow-latest-tag.rego
           test -f pipeline/policies/require-readonly-rootfs.rego
->>>>>>> 6c5a403 (update in project)
 
       - name: Show repository structure
         run: |
