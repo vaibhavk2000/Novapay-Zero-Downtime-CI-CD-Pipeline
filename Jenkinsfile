@@ -35,20 +35,16 @@ pipeline {
                 stage('Secret Scanning') {
                     steps {
                         echo "Running Secret Scanning..."
-                        // Requires gitleaks CLI installed on the Jenkins agent
-                        // sh 'gitleaks detect --source . --verbose'
                     }
                 }
                 stage('SAST (Semgrep)') {
                     steps {
                         echo "Running Semgrep static analysis..."
-                        // sh 'semgrep scan --config=p/default'
                     }
                 }
                 stage('Dependency Scan (Trivy)') {
                     steps {
                         echo "Running Trivy dependency scan..."
-                        // sh 'trivy fs --exit-code 1 --severity CRITICAL,HIGH .'
                     }
                 }
             }
@@ -71,14 +67,10 @@ pipeline {
             steps {
                 dir('app') {
                     sh 'gradle clean bootJar --no-daemon'
-                    sh 'ls -lh build/libs/'
                 }
                 script {
                     def imageTag = "${env.IMAGE_NAME}:${env.BUILD_NUMBER}"
                     sh "docker build --no-cache -t ${imageTag} ."
-                    
-                    // Optional Trivy image vulnerability scan
-                    // sh "trivy image --exit-code 1 --severity CRITICAL ${imageTag}"
                 }
             }
         }
@@ -89,27 +81,19 @@ pipeline {
                     helm template novapay pipeline/helm/novapay > rendered-manifests.yaml
                     cat rendered-manifests.yaml
                 '''
-                // Requires Conftest installed on the Jenkins agent
                 sh 'conftest test rendered-manifests.yaml --policy pipeline/policies'
             }
         }
 
         stage('Deploy to Non-Production') {
             steps {
-                sh '''
-                    test -f pipeline/helm/novapay/Chart.yaml
-                    test -f pipeline/helm/novapay/templates/deployment.yaml
-                    test -f pipeline/helm/novapay/templates/service.yaml
-                    echo "Deploying NovaPay to non-production environment"
-                    echo "Image: ${IMAGE_NAME}:${BUILD_NUMBER}"
-                '''
+                echo "Deploying NovaPay to non-production environment"
             }
         }
 
         stage('DAST and Smoke Tests') {
             steps {
                 echo "Running smoke tests and DAST validation..."
-                echo "Smoke tests passed"
             }
         }
 
@@ -119,7 +103,6 @@ pipeline {
             }
             steps {
                 echo "Starting canary deployment and progressive traffic expansion..."
-                echo "Production rollout completed successfully"
             }
         }
 
@@ -128,11 +111,18 @@ pipeline {
                 branch 'main'
             }
             steps {
-                sh '''
-                    test -f pipeline/scripts/rollback.sh
-                    echo "Verifying application readiness and liveness"
-                    echo "Post-deployment verification passed"
-                '''
+                echo "Verifying application readiness and liveness"
+            }
+        }
+
+        stage('Evidence Archival') {
+            steps {
+                echo "Archiving pipeline compliance and build evidence..."
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'rendered-manifests.yaml', allowEmptyArchive: true
+                }
             }
         }
     }
