@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+    tools {
+        // This tells Jenkins to use the Gradle installation configured in Manage Jenkins -> Tools
+        gradle 'Gradle-8.8'
+        jdk 'JDK-21'
+    }
+
     environment {
         JAVA_VERSION = '21'
         GRADLE_VERSION = '8.8'
